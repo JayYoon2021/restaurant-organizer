@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { useRestaurantStore, Restaurant } from './store';
 import { Plus, Search, MapPin, Trash2, Utensils, Pencil, Link as LinkIcon, Check, X } from 'lucide-react';
@@ -34,12 +34,48 @@ const categoryColors: Record<string, string> = {
 };
 
 export default function Home() {
+  const [isMounted, setIsMounted] = useState(false);
   const [url, setUrl] = useState('');
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editComment, setEditComment] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
+  const touchStartY = useRef(0);
+  const touchEndY = useRef(0);
+  const minSwipeDistance = 50;
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchEndY.current = 0;
+    touchStartY.current = e.targetTouches[0].clientY;
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    touchEndY.current = e.targetTouches[0].clientY;
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStartY.current || !touchEndY.current) return;
+    const distance = touchStartY.current - touchEndY.current;
+    const isUpSwipe = distance > minSwipeDistance;
+    const isDownSwipe = distance < -minSwipeDistance;
+
+    if (isUpSwipe && !isExpanded) {
+      setIsExpanded(true);
+    }
+    if (isDownSwipe && isExpanded) {
+      setIsExpanded(false);
+    }
+  };
+
+
+
+
+
 
   // Filter states
   const [filterRegion, setFilterRegion] = useState<string>('전체');
@@ -171,10 +207,16 @@ export default function Home() {
         className={`sidebar glass ${isExpanded ? 'expanded' : ''}`}
         onClick={() => !isExpanded && setIsExpanded(true)}
       >
-        <div className="sidebar-handle" onClick={(e) => {
-          e.stopPropagation();
-          setIsExpanded(!isExpanded);
-        }} />
+        <div
+          className="sidebar-handle"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsExpanded(!isExpanded);
+          }}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        />
         <header>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
             <Utensils size={24} color="var(--primary)" />
@@ -231,202 +273,206 @@ export default function Home() {
         </header>
 
         <div style={{ flex: 1, overflowY: 'auto', marginTop: '20px', paddingRight: '5px' }}>
-          <DragDropContext onDragEnd={(result) => {
-            if (!result.destination) return;
+          {isMounted ? (
+            <DragDropContext onDragEnd={(result) => {
+              if (!result.destination) return;
 
-            const { source, destination } = result;
-            const region = source.droppableId;
+              const { source, destination } = result;
+              const region = source.droppableId;
 
-            if (source.droppableId !== destination.droppableId) {
-              // Dragging between regions not supported in this simplified view yet
-              // Or implementing basic reorder if regions match
-              return;
-            }
+              if (source.droppableId !== destination.droppableId) {
+                // Dragging between regions not supported in this simplified view yet
+                // Or implementing basic reorder if regions match
+                return;
+              }
 
-            const currentGroup = groupedRestaurants[region];
-            const items = Array.from(currentGroup);
-            const [reorderedItem] = items.splice(source.index, 1);
-            items.splice(destination.index, 0, reorderedItem);
+              const currentGroup = groupedRestaurants[region];
+              const items = Array.from(currentGroup);
+              const [reorderedItem] = items.splice(source.index, 1);
+              items.splice(destination.index, 0, reorderedItem);
 
-            // Reconstruct the full list assuming other regions are unchanged
-            const otherRegions = restaurants.filter(r => (r.region || '기타') !== region);
-            const newRestaurants = [...otherRegions, ...items];
+              // Reconstruct the full list assuming other regions are unchanged
+              const otherRegions = restaurants.filter(r => (r.region || '기타') !== region);
+              const newRestaurants = [...otherRegions, ...items];
 
-            // To maintain overall order correctly we might need more complex logic, 
-            // but effectively we just need to update the store's order.
-            // A safer way: Map the grouped items back to their original positions? 
-            // For now, let's just append reordered group to others (simple reorder).
-            // Actually, we should probably keep the original order for other groups.
+              // To maintain overall order correctly we might need more complex logic, 
+              // but effectively we just need to update the store's order.
+              // A safer way: Map the grouped items back to their original positions? 
+              // For now, let's just append reordered group to others (simple reorder).
+              // Actually, we should probably keep the original order for other groups.
 
-            // Better strategy: Find the indices in the main array?
-            // Since we are filtering/grouping, reordering is tricky.
-            // Let's rely on constructing a new array where we replace the old group with the new group.
+              // Better strategy: Find the indices in the main array?
+              // Since we are filtering/grouping, reordering is tricky.
+              // Let's rely on constructing a new array where we replace the old group with the new group.
 
-            // Re-sort entire list:
-            // 1. Get all items NOT in this region.
-            // 2. Get items IN this region in new order.
-            // 3. Combine.
-            // NOTE: This puts modified region at the end if we just concat. 
-            // To preserve "region block" order, we simply filter out the old region and concat.
-            // Use store's reorderRestaurants.
+              // Re-sort entire list:
+              // 1. Get all items NOT in this region.
+              // 2. Get items IN this region in new order.
+              // 3. Combine.
+              // NOTE: This puts modified region at the end if we just concat. 
+              // To preserve "region block" order, we simply filter out the old region and concat.
+              // Use store's reorderRestaurants.
 
-            const newFullList = restaurants.filter(r => (r.region || '기타') !== region).concat(items);
-            reorderRestaurants(newFullList);
-          }}>
-            {Object.keys(groupedRestaurants).length === 0 ? (
-              <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: '40px' }}>
-                <Search size={48} style={{ opacity: 0.2, marginBottom: '10px' }} />
-                <p>저장된 맛집이 없습니다.</p>
-              </div>
-            ) : (
-              Object.entries(groupedRestaurants).map(([region, items]) => (
-                <Droppable key={region} droppableId={region}>
-                  {(provided) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.droppableProps}
-                      style={{ marginBottom: '24px' }}
-                    >
-                      <h3 style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '12px', paddingLeft: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        {region}
-                      </h3>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {items.map((item, index) => (
-                          <Draggable key={item.id} draggableId={item.id} index={index}>
-                            {(provided) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                                className="glass"
-                                onClick={() => setSelectedId(item.id)}
-                                style={{
-                                  padding: '16px',
-                                  background: 'rgba(255,255,255,0.03)',
-                                  cursor: 'pointer',
-                                  transition: 'all 0.2s ease',
-                                  border: '1px solid rgba(255,255,255,0.05)',
-                                  userSelect: 'none',
-                                  ...provided.draggableProps.style
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
-                              >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                    <h4 style={{ fontWeight: '600' }}>{item.name}</h4>
-                                    <span style={{
-                                      fontSize: '0.65rem',
-                                      padding: '2px 8px',
-                                      borderRadius: '4px',
-                                      background: categoryColors[item.categoryType] || '#94a3b8',
-                                      color: 'white',
-                                      fontWeight: 'bold',
-                                      alignSelf: 'flex-start'
-                                    }}>
-                                      {item.categoryType || '기타'}
-                                    </span>
+              const newFullList = restaurants.filter(r => (r.region || '기타') !== region).concat(items);
+              reorderRestaurants(newFullList);
+            }}>
+              {Object.keys(groupedRestaurants).length === 0 ? (
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: '40px' }}>
+                  <Search size={48} style={{ opacity: 0.2, marginBottom: '10px' }} />
+                  <p>저장된 맛집이 없습니다.</p>
+                </div>
+              ) : (
+                Object.entries(groupedRestaurants).map(([region, items]) => (
+                  <Droppable key={region} droppableId={region}>
+                    {(provided) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        style={{ marginBottom: '24px' }}
+                      >
+                        <h3 style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '12px', paddingLeft: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          {region}
+                        </h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          {items.map((item, index) => (
+                            <Draggable key={item.id} draggableId={item.id} index={index}>
+                              {(provided) => (
+                                <div
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  {...provided.dragHandleProps}
+                                  className="glass"
+                                  onClick={() => setSelectedId(item.id)}
+                                  style={{
+                                    padding: '16px',
+                                    background: 'rgba(255,255,255,0.03)',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    border: '1px solid rgba(255,255,255,0.05)',
+                                    userSelect: 'none',
+                                    ...provided.draggableProps.style
+                                  }}
+                                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                                  onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+                                >
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                      <h4 style={{ fontWeight: '600' }}>{item.name}</h4>
+                                      <span style={{
+                                        fontSize: '0.65rem',
+                                        padding: '2px 8px',
+                                        borderRadius: '4px',
+                                        background: categoryColors[item.categoryType] || '#94a3b8',
+                                        color: 'white',
+                                        fontWeight: 'bold',
+                                        alignSelf: 'flex-start'
+                                      }}>
+                                        {item.categoryType || '기타'}
+                                      </span>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                      <Pencil
+                                        size={16}
+                                        color="#94a3b8"
+                                        style={{ cursor: 'pointer' }}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleEdit(item.id, item.comment);
+                                        }}
+                                      />
+                                      <LinkIcon
+                                        size={16}
+                                        color="#3b82f6"
+                                        style={{ cursor: 'pointer' }}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const linkToCopy = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.name + ' ' + (item.roadAddress || item.address))}`;
+                                          navigator.clipboard.writeText(linkToCopy);
+                                          alert('구글 지도 링크가 복사되었습니다!');
+                                        }}
+                                      />
+                                      <Trash2
+                                        size={16}
+                                        color="#ef4444"
+                                        style={{ cursor: 'pointer' }}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          removeRestaurant(item.id);
+                                        }}
+                                      />
+                                    </div>
                                   </div>
-                                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                    <Pencil
-                                      size={16}
-                                      color="#94a3b8"
-                                      style={{ cursor: 'pointer' }}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleEdit(item.id, item.comment);
-                                      }}
-                                    />
-                                    <LinkIcon
-                                      size={16}
-                                      color="#3b82f6"
-                                      style={{ cursor: 'pointer' }}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        const linkToCopy = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.name + ' ' + (item.roadAddress || item.address))}`;
-                                        navigator.clipboard.writeText(linkToCopy);
-                                        alert('구글 지도 링크가 복사되었습니다!');
-                                      }}
-                                    />
-                                    <Trash2
-                                      size={16}
-                                      color="#ef4444"
-                                      style={{ cursor: 'pointer' }}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        removeRestaurant(item.id);
-                                      }}
-                                    />
-                                  </div>
+                                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '8px' }}>
+                                    <MapPin size={12} /> {item.roadAddress || item.address}
+                                  </p>
+
+                                  {editingId === item.id ? (
+                                    <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '8px' }}>
+                                      <textarea
+                                        value={editComment}
+                                        onChange={(e) => setEditComment(e.target.value)}
+                                        className="input-field"
+                                        style={{
+                                          width: '100%',
+                                          height: '60px',
+                                          fontSize: '0.85rem',
+                                          padding: '8px',
+                                          marginBottom: '8px'
+                                        }}
+                                      />
+                                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                        <button
+                                          onClick={() => setEditingId(null)}
+                                          style={{
+                                            background: 'transparent',
+                                            border: '1px solid var(--text-muted)',
+                                            color: 'var(--text-muted)',
+                                            padding: '4px 8px',
+                                            borderRadius: '6px',
+                                            cursor: 'pointer',
+                                            fontSize: '0.8rem'
+                                          }}
+                                        >
+                                          취소
+                                        </button>
+                                        <button
+                                          onClick={() => saveEdit(item.id)}
+                                          style={{
+                                            background: 'var(--primary)',
+                                            border: 'none',
+                                            color: 'white',
+                                            padding: '4px 12px',
+                                            borderRadius: '6px',
+                                            cursor: 'pointer',
+                                            fontSize: '0.8rem'
+                                          }}
+                                        >
+                                          저장
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    item.comment && (
+                                      <div style={{ padding: '8px 12px', background: 'rgba(79, 70, 229, 0.1)', borderRadius: '8px', fontSize: '0.85rem' }}>
+                                        {item.comment}
+                                      </div>
+                                    )
+                                  )}
                                 </div>
-                                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '8px' }}>
-                                  <MapPin size={12} /> {item.roadAddress || item.address}
-                                </p>
-
-                                {editingId === item.id ? (
-                                  <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '8px' }}>
-                                    <textarea
-                                      value={editComment}
-                                      onChange={(e) => setEditComment(e.target.value)}
-                                      className="input-field"
-                                      style={{
-                                        width: '100%',
-                                        height: '60px',
-                                        fontSize: '0.85rem',
-                                        padding: '8px',
-                                        marginBottom: '8px'
-                                      }}
-                                    />
-                                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                                      <button
-                                        onClick={() => setEditingId(null)}
-                                        style={{
-                                          background: 'transparent',
-                                          border: '1px solid var(--text-muted)',
-                                          color: 'var(--text-muted)',
-                                          padding: '4px 8px',
-                                          borderRadius: '6px',
-                                          cursor: 'pointer',
-                                          fontSize: '0.8rem'
-                                        }}
-                                      >
-                                        취소
-                                      </button>
-                                      <button
-                                        onClick={() => saveEdit(item.id)}
-                                        style={{
-                                          background: 'var(--primary)',
-                                          border: 'none',
-                                          color: 'white',
-                                          padding: '4px 12px',
-                                          borderRadius: '6px',
-                                          cursor: 'pointer',
-                                          fontSize: '0.8rem'
-                                        }}
-                                      >
-                                        저장
-                                      </button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  item.comment && (
-                                    <div style={{ padding: '8px 12px', background: 'rgba(79, 70, 229, 0.1)', borderRadius: '8px', fontSize: '0.85rem' }}>
-                                      {item.comment}
-                                    </div>
-                                  )
-                                )}
-                              </div>
-                            )}
-                          </Draggable>
-                        ))}
-                        {provided.placeholder}
+                              )}
+                            </Draggable>
+                          ))}
+                          {provided.placeholder}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </Droppable>
-              ))
-            )}
-          </DragDropContext>
+                    )}
+                  </Droppable>
+                ))
+              )}
+            </DragDropContext>
+          ) : (
+            <div style={{ textAlign: 'center', marginTop: '50px' }}>Loading...</div>
+          )}
         </div>
       </div>
     </main>
