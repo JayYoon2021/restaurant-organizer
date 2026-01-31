@@ -31,6 +31,9 @@ export default function MapComponent({ restaurants: propRestaurants }: { restaur
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
     });
 
+    console.log('[DEBUG] API Key:', process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ? 'Present (' + process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY.slice(0, 5) + '...)' : 'MISSING');
+
+
     const { restaurants: storeRestaurants, selectedId } = useRestaurantStore();
     const restaurants = propRestaurants || storeRestaurants;
     const [map, setMap] = useState<google.maps.Map | null>(null);
