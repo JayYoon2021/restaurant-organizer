@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=18.0.0"
   },
   "scripts": {
     "dev": "next dev",
@@ -13,12 +13,14 @@
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
     "@react-google-maps/api": "^2.20.8",
-    "@vercel/postgres": "^0.10.0",
+    "@types/pg": "^8.16.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.563.0",
     "next": "16.1.6",
+    "pg": "^8.18.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
     "zustand": "^5.0.10"
   },
