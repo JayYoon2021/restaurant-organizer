@@ -38,6 +38,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editComment, setEditComment] = useState('');
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // Filter states
   const [filterRegion, setFilterRegion] = useState<string>('전체');
@@ -153,7 +154,14 @@ export default function Home() {
     <main>
       <MapComponent restaurants={filteredRestaurants} />
 
-      <div className="sidebar glass">
+      <div
+        className={`sidebar glass ${isExpanded ? 'expanded' : ''}`}
+        onClick={() => !isExpanded && setIsExpanded(true)}
+      >
+        <div className="sidebar-handle" onClick={(e) => {
+          e.stopPropagation();
+          setIsExpanded(!isExpanded);
+        }} />
         <header>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
             <Utensils size={24} color="var(--primary)" />
