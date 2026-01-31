@@ -7,6 +7,7 @@ import { Plus, Search, MapPin, Trash2, Utensils, Pencil, Link as LinkIcon, Check
 
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { useJsApiLoader } from '@react-google-maps/api';
+import { toast } from 'sonner';
 
 const MapComponent = dynamic(() => import('./MapComponent'), { ssr: false });
 
@@ -210,11 +211,11 @@ export default function Home() {
         setUrl('');
         setComment('');
       } else {
-        alert(`'${query}' 결과를 찾을 수 없습니다. 직접 이름을 입력해 보세요.`);
+        toast.error(`'${query}' 결과를 찾을 수 없습니다. 직접 이름을 입력해 보세요.`);
       }
     } catch (error) {
       console.error(error);
-      alert('데이터 처리 중 오류가 발생했습니다.');
+      toast.error('데이터 처리 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
@@ -416,7 +417,7 @@ export default function Home() {
                                           e.stopPropagation();
                                           const linkToCopy = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.name + ' ' + (item.roadAddress || item.address))}`;
                                           navigator.clipboard.writeText(linkToCopy);
-                                          alert('구글 지도 링크가 복사되었습니다!');
+                                          toast.success('구글 지도 링크가 복사되었습니다!');
                                         }}
                                       />
                                       <Trash2

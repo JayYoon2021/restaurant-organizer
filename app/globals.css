@@ -121,9 +121,9 @@ select.input-field option {
 
   .sidebar-handle {
     width: 120px;
-    height: 6px;
+    height: 12px;
     background: rgba(255, 255, 255, 0.4);
-    border-radius: 4px;
+    border-radius: 6px;
     margin: -10px auto 10px;
     cursor: pointer;
     display: block !important;
