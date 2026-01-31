@@ -58,18 +58,44 @@ export default function Home() {
     touchEndY.current = e.targetTouches[0].clientY;
   };
 
-  const onTouchEnd = () => {
-    if (!touchStartY.current || !touchEndY.current) return;
+  const onTouchEnd = (e: React.TouchEvent) => {
+    // If we didn't move much (Tap), treat as toggle
+    if (!touchStartY.current || touchEndY.current === 0) {
+      // It was a tap (no move) or very small move that didn't trigger onTouchMove significantly?
+      // Actually onTouchMove fires even for small moves. 
+      // Better logic: calculate distance. If touchEndY is 0, it means no move = Tap.
+      // However, we need to be careful.
+      if (e.cancelable) e.preventDefault();
+      setIsExpanded(!isExpanded);
+      return;
+    }
+
     const distance = touchStartY.current - touchEndY.current;
+
+    // Reset for next time
+    const start = touchStartY.current;
+    const end = touchEndY.current;
+    touchStartY.current = 0;
+    touchEndY.current = 0;
+
+    // Tap detection (Threshold 10px)
+    if (Math.abs(start - end) < 10) {
+      if (e.cancelable) e.preventDefault();
+      setIsExpanded(!isExpanded);
+      return;
+    }
+
     const isUpSwipe = distance > minSwipeDistance;
     const isDownSwipe = distance < -minSwipeDistance;
 
-    if (isUpSwipe && !isExpanded) {
+    if (isUpSwipe) {
+      if (e.cancelable) e.preventDefault();
       setIsExpanded(true);
-    }
-    if (isDownSwipe && isExpanded) {
+    } else if (isDownSwipe) {
+      if (e.cancelable) e.preventDefault();
       setIsExpanded(false);
     }
+    // If between 10 and 50, do nothing or snap back? Do nothing.
   };
 
 
@@ -209,13 +235,10 @@ export default function Home() {
       >
         <div
           className="sidebar-handle"
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsExpanded(!isExpanded);
-          }}
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
+          onClick={(e) => e.stopPropagation()}
         />
         <header>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
