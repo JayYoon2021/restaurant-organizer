@@ -107,7 +107,12 @@ export default function Home() {
   const [filterRegion, setFilterRegion] = useState<string>('전체');
   const [filterCategory, setFilterCategory] = useState<string>('전체');
 
-  const { restaurants, addRestaurant, removeRestaurant, updateComment, reorderRestaurants, setSelectedId } = useRestaurantStore();
+  /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  const { restaurants, addRestaurant, removeRestaurant, updateComment, reorderRestaurants, setSelectedId, fetchRestaurants } = useRestaurantStore();
+
+  useEffect(() => {
+    fetchRestaurants();
+  }, []);
 
   // Extract unique regions and categories for filter dropdowns
   const uniqueRegions = useMemo(() => {

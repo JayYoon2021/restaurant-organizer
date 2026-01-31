@@ -108,8 +108,10 @@ select.input-field option {
     top: auto !important;
     border-radius: 20px 20px 0 0 !important;
     padding: 20px !important;
-    height: 85vh; /* Max height when expanded */
-    transform: translateY(calc(100% - 140px)); /* Default collapsed state showing header/search */
+    height: 85vh;
+    /* Max height when expanded */
+    transform: translateY(calc(100% - 140px));
+    /* Default collapsed state showing header/search */
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
@@ -118,10 +120,10 @@ select.input-field option {
   }
 
   .sidebar-handle {
-    width: 40px;
-    height: 4px;
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 2px;
+    width: 120px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 4px;
     margin: -10px auto 10px;
     cursor: pointer;
     display: block !important;
