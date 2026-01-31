@@ -6,6 +6,7 @@ import { useRestaurantStore, Restaurant } from './store';
 import { Plus, Search, MapPin, Trash2, Utensils, Pencil, Link as LinkIcon, Check, X } from 'lucide-react';
 
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { useJsApiLoader } from '@react-google-maps/api';
 
 const MapComponent = dynamic(() => import('./MapComponent'), { ssr: false });
 
@@ -76,6 +77,12 @@ export default function Home() {
     setEditingId(null);
   };
 
+  // Load Google Maps API for Geocoding access
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+  });
+
   const handleAdd = async () => {
     if (!url) return;
     setLoading(true);
@@ -99,16 +106,22 @@ export default function Home() {
         const item = data.items[0];
         const name = item.title.replace(/<[^>]*>?/gm, '');
 
-        // 3. Geocoding
-        const geoRes = await fetch(`/api/geocode?address=${encodeURIComponent(item.roadAddress || item.address)}`);
-        const geoData = await geoRes.json();
-
+        // 3. Geocoding (Client-side)
         let lat = 37.5665;
         let lng = 126.9780;
 
-        if (geoData.lat && geoData.lng) {
-          lat = geoData.lat;
-          lng = geoData.lng;
+        if (isLoaded && window.google) {
+          const geocoder = new window.google.maps.Geocoder();
+          try {
+            const geoRes = await geocoder.geocode({ address: item.roadAddress || item.address });
+            if (geoRes.results && geoRes.results.length > 0) {
+              const location = geoRes.results[0].geometry.location;
+              lat = location.lat();
+              lng = location.lng();
+            }
+          } catch (e) {
+            console.error("Geocoding failed:", e);
+          }
         }
 
         const newRestaurant: Restaurant = {
