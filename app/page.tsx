@@ -172,7 +172,8 @@ export default function Home() {
         businessHours: data.businessHours,
         phoneNumber: data.phoneNumber,
         recentVibes: data.recentVibes,
-        priceRange: data.priceRange
+        priceRange: data.priceRange,
+        lastUpdated: new Date().toISOString()
       };
 
       addRestaurant(updated);
@@ -584,18 +585,25 @@ export default function Home() {
                                   </p>
 
                                   {/* AI Info Badge Area */}
-                                  {(item.status || item.recentVibes || item.priceRange) && (
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
-                                      {item.status && (
-                                        <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', background: item.status.includes('영업 중') ? '#dcfce7' : '#fee2e2', color: item.status.includes('영업 중') ? '#166534' : '#991b1b' }}>
-                                          {item.status}
-                                        </span>
-                                      )}
-                                      {item.priceRange && (
-                                        <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', background: '#f3f4f6', color: '#374151' }}>
-                                          {item.priceRange}
-                                        </span>
-                                      )}
+                                  {(item.status || item.recentVibes || item.priceRange || item.lastUpdated) && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '8px' }}>
+                                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+                                        {item.status && (
+                                          <span style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: '6px', background: item.status.includes('영업 중') ? '#dcfce7' : '#fee2e2', color: item.status.includes('영업 중') ? '#15803d' : '#991b1b', fontWeight: 'bold', border: '1px solid rgba(0,0,0,0.05)' }}>
+                                            {item.status}
+                                          </span>
+                                        )}
+                                        {item.priceRange && (
+                                          <span style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: '6px', background: '#f3f4f6', color: '#1f2937', fontWeight: '500', border: '1px solid rgba(0,0,0,0.05)' }}>
+                                            {item.priceRange}
+                                          </span>
+                                        )}
+                                        {item.lastUpdated && (
+                                          <span style={{ fontSize: '0.65rem', color: '#9ca3af', marginLeft: 'auto' }}>
+                                            Updated: {new Date(item.lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                          </span>
+                                        )}
+                                      </div>
                                     </div>
                                   )}
                                   {/* Detailed Info (Hours, Phone, Vibes) */}

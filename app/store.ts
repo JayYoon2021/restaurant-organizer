@@ -19,6 +19,7 @@ export interface Restaurant {
     phoneNumber?: string;   // e.g. "02-1234-5678"
     recentVibes?: string;   // e.g. "조용한, 데이트하기 좋은"
     priceRange?: string;    // e.g. "1만원대"
+    lastUpdated?: string;   // ISO string e.g. "2024-02-01T12:00:00.000Z"
 }
 
 export interface RestaurantStore {
