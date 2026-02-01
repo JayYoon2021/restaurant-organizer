@@ -13,6 +13,12 @@ export interface Restaurant {
     comment: string;
     region: string;
     link?: string;
+    // New fields for Auto-Update
+    status?: string;        // e.g. "영업 중", "영업 종료"
+    businessHours?: string; // e.g. "월-금 10:00~22:00"
+    phoneNumber?: string;   // e.g. "02-1234-5678"
+    recentVibes?: string;   // e.g. "조용한, 데이트하기 좋은"
+    priceRange?: string;    // e.g. "1만원대"
 }
 
 export interface RestaurantStore {

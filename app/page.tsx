@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { useRestaurantStore, Restaurant } from './store';
-import { Plus, Search, MapPin, Trash2, Utensils, Pencil, Link as LinkIcon, Check, X, Camera } from 'lucide-react';
+import { Plus, Search, MapPin, Trash2, Utensils, Pencil, Link as LinkIcon, Check, X, Camera, RefreshCw } from 'lucide-react';
 
 
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -146,6 +146,41 @@ export default function Home() {
   const saveEdit = (id: string) => {
     updateComment(id, editComment);
     setEditingId(null);
+  };
+
+  const handleUpdateInfo = async (id: string, name: string, address: string) => {
+    const toastId = toast.loading(`${name} 정보 업데이트 중...`);
+    try {
+      const res = await fetch('/api/update-info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, address })
+      });
+
+      if (!res.ok) throw new Error('Update failed');
+
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      // Optimistic update via generic addRestaurant (upsert)
+      const current = restaurants.find(r => r.id === id);
+      if (!current) return;
+
+      const updated: Restaurant = {
+        ...current,
+        status: data.status,
+        businessHours: data.businessHours,
+        phoneNumber: data.phoneNumber,
+        recentVibes: data.recentVibes,
+        priceRange: data.priceRange
+      };
+
+      addRestaurant(updated);
+      toast.success('정보가 업데이트되었습니다!', { id: toastId });
+    } catch (e) {
+      console.error(e);
+      toast.error('업데이트 실패: ' + (e as Error).message, { id: toastId });
+    }
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -504,6 +539,15 @@ export default function Home() {
                                       </span>
                                     </div>
                                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                      <RefreshCw
+                                        size={16}
+                                        color="#8b5cf6"
+                                        style={{ cursor: 'pointer' }}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleUpdateInfo(item.id, item.name, item.roadAddress || item.address);
+                                        }}
+                                      />
                                       <Pencil
                                         size={16}
                                         color="#94a3b8"
@@ -538,6 +582,30 @@ export default function Home() {
                                   <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '8px' }}>
                                     <MapPin size={12} /> {item.roadAddress || item.address}
                                   </p>
+
+                                  {/* AI Info Badge Area */}
+                                  {(item.status || item.recentVibes || item.priceRange) && (
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                                      {item.status && (
+                                        <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', background: item.status.includes('영업 중') ? '#dcfce7' : '#fee2e2', color: item.status.includes('영업 중') ? '#166534' : '#991b1b' }}>
+                                          {item.status}
+                                        </span>
+                                      )}
+                                      {item.priceRange && (
+                                        <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', background: '#f3f4f6', color: '#374151' }}>
+                                          {item.priceRange}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                  {/* Detailed Info (Hours, Phone, Vibes) */}
+                                  {(item.businessHours || item.phoneNumber || item.recentVibes) && (
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', background: 'rgba(0,0,0,0.02)', padding: '8px', borderRadius: '6px', marginBottom: '8px' }}>
+                                      {item.recentVibes && <div style={{ marginBottom: '4px' }}>✨ {item.recentVibes}</div>}
+                                      {item.businessHours && <div style={{ marginBottom: '2px' }}>🕒 {item.businessHours}</div>}
+                                      {item.phoneNumber && <div>📞 {item.phoneNumber}</div>}
+                                    </div>
+                                  )}
 
                                   {editingId === item.id ? (
                                     <div onClick={(e) => e.stopPropagation()} style={{ marginTop: '8px' }}>
