@@ -3,7 +3,8 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { useRestaurantStore, Restaurant } from './store';
-import { Plus, Search, MapPin, Trash2, Utensils, Pencil, Link as LinkIcon, Check, X } from 'lucide-react';
+import { Plus, Search, MapPin, Trash2, Utensils, Pencil, Link as LinkIcon, Check, X, Camera } from 'lucide-react';
+
 
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { useJsApiLoader } from '@react-google-maps/api';
@@ -44,6 +45,8 @@ export default function Home() {
   const [isExpanded, setIsExpanded] = useState(false);
   const touchStartY = useRef(0);
   const touchEndY = useRef(0);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const minSwipeDistance = 50;
 
   useEffect(() => {
@@ -143,6 +146,71 @@ export default function Home() {
   const saveEdit = (id: string) => {
     updateComment(id, editComment);
     setEditingId(null);
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsAnalyzing(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+
+      if (data.error) {
+        toast.error('이미지 분석 실패: ' + data.error);
+        console.error(data.error);
+        /* If specific error "No text found", prompt user */
+        if (data.error.includes("No text found")) {
+          toast.error("정보를 읽을 수 없습니다. 직접 입력해 주세요.");
+        }
+      } else {
+        // Success
+        /* 
+           Expected format:
+           restaurant_name: string
+           recommended_menu: string[]
+           address: string
+           tags: string[]
+        */
+        if (data.restaurant_name) {
+          setUrl(data.restaurant_name);
+          toast.success(`'${data.restaurant_name}' 정보를 찾았습니다!`);
+        } else {
+          toast.info("식당 이름을 찾지 못했습니다. 직접 입력해주세요.");
+        }
+
+        let autoComment = "";
+        if (data.recommended_menu && data.recommended_menu.length > 0) {
+          autoComment += `추천 메뉴: ${data.recommended_menu.join(', ')}\n`;
+        }
+        if (data.address) {
+          autoComment += `주소: ${data.address}\n`;
+        }
+        if (data.tags && data.tags.length > 0) {
+          autoComment += `태그: ${data.tags.join(' ')}\n`;
+        }
+
+        if (autoComment) {
+          setComment(prev => prev ? prev + '\n' + autoComment : autoComment);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('서버 오류가 발생했습니다.');
+    } finally {
+      setIsAnalyzing(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
   // Load Google Maps API for Geocoding access
@@ -294,10 +362,46 @@ export default function Home() {
             <button
               className="btn-primary"
               onClick={handleAdd}
-              disabled={loading}
+              disabled={loading || isAnalyzing}
             >
               {loading ? '검색 중...' : '맛집 추가하기'}
             </button>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '5px' }}>
+              <input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                style={{ display: 'none' }}
+                onChange={handleFileChange}
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={loading || isAnalyzing}
+                style={{
+                  background: 'transparent',
+                  border: '1px dashed var(--text-muted)',
+                  color: 'var(--text-muted)',
+                  padding: '8px',
+                  width: '100%',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  fontSize: '0.9rem'
+                }}
+              >
+                {isAnalyzing ? (
+                  <span>분석 중... 🤖</span>
+                ) : (
+                  <>
+                    <Camera size={18} />
+                    사진으로 자동 완성
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </header>
 
