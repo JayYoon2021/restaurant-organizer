@@ -307,7 +307,7 @@ export default function Home() {
           lng: lng,
           comment: comment,
           region: item.address.split(' ')[0] || '기타',
-          link: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name + ' ' + (item.roadAddress || item.address))}`
+          link: `https://map.naver.com/p/search/${encodeURIComponent(name)}`
         };
 
         addRestaurant(newRestaurant);
@@ -560,13 +560,13 @@ export default function Home() {
                                       />
                                       <LinkIcon
                                         size={16}
-                                        color="#3b82f6"
+                                        color="#03C75A"
                                         style={{ cursor: 'pointer' }}
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          const linkToCopy = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.name + ' ' + (item.roadAddress || item.address))}`;
+                                          const linkToCopy = `https://map.naver.com/p/search/${encodeURIComponent(item.name)}`;
                                           navigator.clipboard.writeText(linkToCopy);
-                                          toast.success('구글 지도 링크가 복사되었습니다!');
+                                          toast.success('네이버 지도 링크가 복사되었습니다!');
                                         }}
                                       />
                                       <Trash2
